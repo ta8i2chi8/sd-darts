@@ -71,7 +71,7 @@ class Network(nn.Module):
                 C: 最初のチャネル数(args.init_channels),
                 num_classes: タスク(CIFAR10)のクラス数,
                 layers: セルの数,
-                criterion: loss関数,
+                criterion: loss関数（customLoss）,
                 steps: ノード数に関係する値（default:4　←　ノード数７ - 入力数２ - 出力１),
                 multiplier: 最後にconcatするノードの数　(default4),
                 stem_multiplier: 最初のself.stemでチャネル数を何倍にするか　(default3),
@@ -130,22 +130,20 @@ class Network(nn.Module):
 
     def _loss(self, input, target):
         logits = self(input)
-        return self._criterion(logits, target)
+        alphas = torch.cat([torch.sigmoid(self.alphas_normal), torch.sigmoid(self.alphas_reduce)], dim=0)
+        return self._criterion(logits, target, alphas)
 
     # アーキテクチャのパラメータを初期化
     def _initialize_alphas(self):
+        # k = 2 + 3 + 4 + 5 = 14
         k = sum(1 for i in range(self._steps) for n in range(2 + i))
         num_ops = len(PRIMITIVES)
 
         self.alphas_normal = Variable(1e-3 * torch.randn(k, num_ops).cuda(), requires_grad=True)
         self.alphas_reduce = Variable(1e-3 * torch.randn(k, num_ops).cuda(), requires_grad=True)
-        self._arch_parameters = [
-            self.alphas_normal,
-            self.alphas_reduce,
-        ]
 
     def arch_parameters(self):
-        return self._arch_parameters
+        return [self.alphas_normal, self.alphas_reduce]
 
     # 選択されたoperationをGenotypeとして出力
     def genotype(self):

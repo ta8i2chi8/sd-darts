@@ -36,25 +36,29 @@ class Architect(object):
         # second order
         if unrolled:
             # ∂Lval(ω - lr * [∂Ltrain(ω,α) / ∂ω],α) / ∂α
-            self._backward_step_unrolled(input_train, target_train, input_valid, target_valid, eta, network_optimizer)
+            loss1, loss2 = self._backward_step_unrolled(input_train, target_train, input_valid, target_valid, eta, network_optimizer)
         # first order
         else:
             # ∂Lval(ω,α) / ∂α
-            self._backward_step(input_valid, target_valid)
+            loss1, loss2 = self._backward_step(input_valid, target_valid)
 
         # アーキテクチャパラメータ(α)のoptimizerをstep
         self.optimizer.step()
 
+        return loss1, loss2
+
     def _backward_step(self, input_valid, target_valid):
-        loss = self.model._loss(input_valid, target_valid)
+        loss, loss1, loss2 = self.model._loss(input_valid, target_valid)
         loss.backward()
+
+        return loss1, loss2
 
     def _backward_step_unrolled(self, input_train, target_train, input_valid, target_valid, eta, network_optimizer):
         # ω’ = ω - lr * [∂Ltrain(ω,α) / ∂ω]　に更新したmodelの作成
         unrolled_model = self._compute_unrolled_model(input_train, target_train, eta, network_optimizer)
 
         # Lval(ω - lr * [∂Ltrain(ω,α) / ∂ω],α) の計算
-        unrolled_loss = unrolled_model._loss(input_valid, target_valid)
+        unrolled_loss, unrolled_loss1, unrolled_loss2 = unrolled_model._loss(input_valid, target_valid)
 
         unrolled_loss.backward()
         dalpha = [v.grad for v in unrolled_model.arch_parameters()]
@@ -70,9 +74,11 @@ class Architect(object):
             else:
                 v.grad.data.copy_(g.data)
 
+        return unrolled_loss1, unrolled_loss2
+
     def _compute_unrolled_model(self, input, target, eta, network_optimizer):
         # trainデータでのLoss計算
-        loss = self.model._loss(input, target)
+        loss, _, _ = self.model._loss(input, target)
 
         # 現在の重み(ω)をconcat
         theta = _concat(self.model.parameters()).data
@@ -111,12 +117,12 @@ class Architect(object):
         R = r / _concat(vector).norm()  # r / L2ノルム
         for p, v in zip(self.model.parameters(), vector):
             p.data.add_(v, alpha=R)
-        loss = self.model._loss(input, target)
+        loss, _, _ = self.model._loss(input, target)
         grads_p = torch.autograd.grad(loss, self.model.arch_parameters())
 
         for p, v in zip(self.model.parameters(), vector):
             p.data.sub_(v, alpha=(2 * R))
-        loss = self.model._loss(input, target)
+        loss, _, _ = self.model._loss(input, target)
         grads_n = torch.autograd.grad(loss, self.model.arch_parameters())
 
         for p, v in zip(self.model.parameters(), vector):

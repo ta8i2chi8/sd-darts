@@ -35,7 +35,7 @@ def get_genotypes(log_path):
 
         genotypes = []
         for i in range(50):
-            genotypes.append(eval(raw_lines[4 + i * 12][35:]))
+            genotypes.append(eval(raw_lines[4 + i * 46][35:]))
 
     return genotypes
 
