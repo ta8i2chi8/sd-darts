@@ -166,8 +166,6 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
     objs2 = utils.AvgrageMeter()  # architecture重み学習のloss (regularization)
     top1 = utils.AvgrageMeter()  # accuracy (top1)
     top5 = utils.AvgrageMeter()  # accuracy (top5)
-    valid_queue_iter = iter(valid_queue)
-
     model.train()
 
     for step, (input, target) in enumerate(train_queue):
@@ -177,7 +175,12 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         target = target.cuda(non_blocking=True)
 
         # 1バッチ分のデータ取得（アーキテクチャ探索に用いる用）
-        input_search, target_search = next(valid_queue_iter)
+        try:
+            input_search, target_search = next(valid_queue_iter)
+        except:
+            valid_queue_iter = iter(valid_queue)
+            input_search, target_search = next(valid_queue_iter)
+
         input_search = input_search.cuda()
         target_search = target_search.cuda(non_blocking=True)
 
