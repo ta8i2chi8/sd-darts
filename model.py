@@ -115,7 +115,7 @@ class NetworkCIFAR(nn.Module):
         """
             引数： {
                 C: 最初のチャネル数(args.init_channels),
-                num_classes: タスク(CIFAR10)のクラス数,
+                num_classes: タスクのクラス数,
                 layers: セルの数,
                 auxiliary: auxiliary towerを使うかどうか（bool型）
                 genotype: operationの候補が集まったタプル

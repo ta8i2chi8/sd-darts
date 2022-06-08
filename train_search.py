@@ -44,6 +44,7 @@ parser.add_argument('--train_portion', type=float, default=0.5, help='portion of
 parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unrolled validation loss')
 parser.add_argument('--arch_learning_rate', type=float, default=3e-3, help='learning rate for arch encoding')
 parser.add_argument('--arch_weight_decay', type=float, default=1e-3, help='weight decay for arch encoding')
+parser.add_argument('--cifar100', action='store_true', default=False, help='search with cifar100 dataset')
 args = parser.parse_args()
 
 
@@ -61,7 +62,10 @@ def main():
 
     writer = SummaryWriter(log_dir="./runs/{}".format(start_time))
 
-    CIFAR_CLASSES = 10
+    if args.cifar100:
+        CIFAR_CLASSES = 100
+    else:
+        CIFAR_CLASSES = 10
 
     if not torch.cuda.is_available():
         logging.info('no gpu device available')
@@ -89,8 +93,12 @@ def main():
         momentum=args.momentum,
         weight_decay=args.weight_decay)
 
-    train_transform, valid_transform = utils._data_transforms_cifar10(args)
-    train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
+    if args.cifar100:
+        train_transform, valid_transform = utils._data_transforms_cifar100(args)
+        train_data = dset.CIFAR100(root=args.data, train=True, download=True, transform=train_transform)
+    else:
+        train_transform, valid_transform = utils._data_transforms_cifar10(args)
+        train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
 
     num_train = len(train_data)
     indices = list(range(num_train))

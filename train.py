@@ -37,6 +37,7 @@ parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--arch', type=str, default='FairDARTS', help='which architecture to use')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
+parser.add_argument('--cifar100', action='store_true', default=False, help='if use cifar100')
 args = parser.parse_args()
 
 
@@ -54,7 +55,10 @@ def main():
 
     writer = SummaryWriter(log_dir="./runs/{}".format(start_time))
 
-    CIFAR_CLASSES = 10
+    if args.cifar100:
+        CIFAR_CLASSES = 100
+    else:
+        CIFAR_CLASSES = 10
 
     if not torch.cuda.is_available():
         logging.info('no gpu device available')
@@ -83,9 +87,13 @@ def main():
         weight_decay=args.weight_decay
     )
 
-    train_transform, valid_transform = utils._data_transforms_cifar10(args)
-    train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
-    valid_data = dset.CIFAR10(root=args.data, train=False, download=True, transform=valid_transform)
+    train_transform, valid_transform = utils._data_transforms_cifar100(args)
+    if args.cifar100:
+        train_data = dset.CIFAR100(root=args.data, train=True, download=True, transform=train_transform)
+        valid_data = dset.CIFAR100(root=args.data, train=False, download=True, transform=valid_transform)
+    else:
+        train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
+        valid_data = dset.CIFAR10(root=args.data, train=False, download=True, transform=valid_transform)
 
     train_queue = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=2)
